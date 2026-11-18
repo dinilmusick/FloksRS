@@ -1,0 +1,9 @@
+[package]
+name = "floksrs"
+version = "0.1.0"
+edition = "2021"
+description = "Native Rust authoring and editable graph contracts for Floks"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
