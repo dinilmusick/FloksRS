@@ -20,13 +20,25 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Context { Service, GeneralComponent, Application }
+pub enum Context {
+    Service,
+    GeneralComponent,
+    Application,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NodeKind { Page, Section, Component }
+pub enum NodeKind {
+    Page,
+    Section,
+    Component,
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Value { Text(String), Number(f64), Boolean(bool) }
+pub enum Value {
+    Text(String),
+    Number(f64),
+    Boolean(bool),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AuthoringNode {
@@ -47,10 +59,19 @@ impl AuthoringNode {
             NodeKind::Page => "Page",
             NodeKind::Section => "Section",
             NodeKind::Component => "Component",
-        }.to_owned();
-        Self { id: id.into(), kind, name, component_id: None, parent_id,
-            props: BTreeMap::new(), slots: BTreeMap::new(),
-            states: BTreeMap::new(), events: BTreeMap::new() }
+        }
+        .to_owned();
+        Self {
+            id: id.into(),
+            kind,
+            name,
+            component_id: None,
+            parent_id,
+            props: BTreeMap::new(),
+            slots: BTreeMap::new(),
+            states: BTreeMap::new(),
+            events: BTreeMap::new(),
+        }
     }
 }
 
@@ -81,8 +102,14 @@ pub struct AuthoringSession {
 
 impl AuthoringSession {
     pub fn new(session_id: impl Into<String>, context: Context) -> Self {
-        Self { session_id: session_id.into(), context, nodes: Vec::new(),
-            bindings: Vec::new(), operations: Vec::new(), metadata: BTreeMap::new() }
+        Self {
+            session_id: session_id.into(),
+            context,
+            nodes: Vec::new(),
+            bindings: Vec::new(),
+            operations: Vec::new(),
+            metadata: BTreeMap::new(),
+        }
     }
 
     pub fn add_node(&mut self, node: AuthoringNode) -> Result<(), Error> {
@@ -99,7 +126,10 @@ impl AuthoringSession {
     }
 
     pub fn get_children(&self, id: &str) -> Vec<&AuthoringNode> {
-        self.nodes.iter().filter(|n| n.parent_id.as_deref() == Some(id)).collect()
+        self.nodes
+            .iter()
+            .filter(|n| n.parent_id.as_deref() == Some(id))
+            .collect()
     }
 
     /// The upstream API includes the requested ID even if it is unknown.
@@ -113,19 +143,30 @@ impl AuthoringSession {
                     changed |= ids.insert(node.id.clone());
                 }
             }
-            if !changed { break; }
+            if !changed {
+                break;
+            }
         }
         ids
     }
 
     pub fn depth(&self, id: &str) -> Result<usize, Error> {
-        let mut parent = self.nodes.iter().find(|n| n.id == id)
-            .ok_or_else(|| Error::MissingNode(id.to_owned()))?.parent_id.as_deref();
+        let mut parent = self
+            .nodes
+            .iter()
+            .find(|n| n.id == id)
+            .ok_or_else(|| Error::MissingNode(id.to_owned()))?
+            .parent_id
+            .as_deref();
         let mut visited = HashSet::from([id.to_owned()]);
         let mut depth = 0;
         while let Some(p) = parent {
-            if !visited.insert(p.to_owned()) { return Err(Error::Cycle); }
-            let Some(node) = self.nodes.iter().find(|n| n.id == p) else { break; };
+            if !visited.insert(p.to_owned()) {
+                return Err(Error::Cycle);
+            }
+            let Some(node) = self.nodes.iter().find(|n| n.id == p) else {
+                break;
+            };
             depth += 1;
             parent = node.parent_id.as_deref();
         }
@@ -140,9 +181,14 @@ impl AuthoringSession {
             if !self.nodes.iter().any(|n| n.id == new_parent) {
                 return Err(Error::MissingParent(new_parent.to_owned()));
             }
-            if self.subtree_ids(id).contains(new_parent) { return Err(Error::Cycle); }
+            if self.subtree_ids(id).contains(new_parent) {
+                return Err(Error::Cycle);
+            }
         }
-        self.nodes.iter_mut().find(|n| n.id == id).expect("verified node")
+        self.nodes
+            .iter_mut()
+            .find(|n| n.id == id)
+            .expect("verified node")
             .parent_id = parent.map(ToOwned::to_owned);
         Ok(())
     }
@@ -167,23 +213,33 @@ impl AuthoringSession {
             return Err(Error::MissingNode(binding.component_id));
         }
         binding.property = binding.property.trim().to_owned();
-        if binding.property.is_empty() { return Err(Error::EmptyBindingProperty); }
-        self.bindings.retain(|old|
-            old.component_id != binding.component_id || old.property != binding.property);
+        if binding.property.is_empty() {
+            return Err(Error::EmptyBindingProperty);
+        }
+        self.bindings.retain(|old| {
+            old.component_id != binding.component_id || old.property != binding.property
+        });
         self.bindings.push(binding);
         Ok(())
     }
 
     pub fn unbind_property(&mut self, component_id: &str, property: &str) {
-        self.bindings.retain(|b| b.component_id != component_id || b.property != property);
+        self.bindings
+            .retain(|b| b.component_id != component_id || b.property != property);
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Socket { pub id: String, pub data_type: Option<String> }
+pub struct Socket {
+    pub id: String,
+    pub data_type: Option<String>,
+}
 impl Socket {
     pub fn new(id: impl Into<String>, data_type: Option<&str>) -> Self {
-        Self { id: id.into(), data_type: data_type.map(ToOwned::to_owned) }
+        Self {
+            id: id.into(),
+            data_type: data_type.map(ToOwned::to_owned),
+        }
     }
 }
 
@@ -191,8 +247,7 @@ impl Socket {
 pub fn compatible(a: &Socket, b: &Socket) -> bool {
     let a = a.data_type.as_deref().unwrap_or("ANY").to_ascii_uppercase();
     let b = b.data_type.as_deref().unwrap_or("ANY").to_ascii_uppercase();
-    a.is_empty() || b.is_empty() || a == "ANY" || b == "ANY" ||
-        a == "*" || b == "*" || a == b
+    a.is_empty() || b.is_empty() || a == "ANY" || b == "ANY" || a == "*" || b == "*" || a == b
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -207,8 +262,15 @@ pub struct GraphNode {
 }
 impl GraphNode {
     pub fn new(id: impl Into<String>, node_type: impl Into<String>, x: f64, y: f64) -> Self {
-        Self { id: id.into(), node_type: node_type.into(), x, y, position_locked: false,
-            inputs: Vec::new(), outputs: Vec::new() }
+        Self {
+            id: id.into(),
+            node_type: node_type.into(),
+            x,
+            y,
+            position_locked: false,
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+        }
     }
 }
 
@@ -221,63 +283,112 @@ pub struct Edge {
     pub target_socket: String,
 }
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct Graph { pub nodes: BTreeMap<String, GraphNode>, pub edges: BTreeMap<String, Edge> }
+pub struct Graph {
+    pub nodes: BTreeMap<String, GraphNode>,
+    pub edges: BTreeMap<String, Edge>,
+}
 
 impl Graph {
     pub fn add_node(&mut self, node: GraphNode) -> Result<(), Error> {
-        if self.nodes.contains_key(&node.id) { return Err(Error::DuplicateNode(node.id)); }
+        if self.nodes.contains_key(&node.id) {
+            return Err(Error::DuplicateNode(node.id));
+        }
         self.nodes.insert(node.id.clone(), node);
         Ok(())
     }
 
     pub fn move_node(&mut self, id: &str, x: f64, y: f64) -> Result<(), Error> {
-        let node = self.nodes.get_mut(id).ok_or_else(|| Error::MissingNode(id.into()))?;
-        if node.position_locked { return Err(Error::PositionLocked(id.into())); }
-        if !x.is_finite() || !y.is_finite() { return Err(Error::InvalidViewport); }
+        let node = self
+            .nodes
+            .get_mut(id)
+            .ok_or_else(|| Error::MissingNode(id.into()))?;
+        if node.position_locked {
+            return Err(Error::PositionLocked(id.into()));
+        }
+        if !x.is_finite() || !y.is_finite() {
+            return Err(Error::InvalidViewport);
+        }
         node.x = x;
         node.y = y;
         Ok(())
     }
 
     pub fn connect(&mut self, edge: Edge) -> Result<(), Error> {
-        if self.edges.contains_key(&edge.id) { return Err(Error::DuplicateEdge(edge.id)); }
-        let source = self.nodes.get(&edge.source)
+        if self.edges.contains_key(&edge.id) {
+            return Err(Error::DuplicateEdge(edge.id));
+        }
+        let source = self
+            .nodes
+            .get(&edge.source)
             .ok_or_else(|| Error::MissingNode(edge.source.clone()))?;
-        let target = self.nodes.get(&edge.target)
+        let target = self
+            .nodes
+            .get(&edge.target)
             .ok_or_else(|| Error::MissingNode(edge.target.clone()))?;
-        let output = source.outputs.iter().find(|s| s.id == edge.source_socket)
+        let output = source
+            .outputs
+            .iter()
+            .find(|s| s.id == edge.source_socket)
             .ok_or_else(|| Error::MissingSocket(edge.source_socket.clone()))?;
-        let input = target.inputs.iter().find(|s| s.id == edge.target_socket)
+        let input = target
+            .inputs
+            .iter()
+            .find(|s| s.id == edge.target_socket)
             .ok_or_else(|| Error::MissingSocket(edge.target_socket.clone()))?;
-        if !compatible(output, input) { return Err(Error::IncompatibleSockets); }
+        if !compatible(output, input) {
+            return Err(Error::IncompatibleSockets);
+        }
         self.edges.insert(edge.id.clone(), edge);
         Ok(())
     }
 
     pub fn remove_node(&mut self, id: &str) -> Result<(), Error> {
-        if self.nodes.remove(id).is_none() { return Err(Error::MissingNode(id.into())); }
+        if self.nodes.remove(id).is_none() {
+            return Err(Error::MissingNode(id.into()));
+        }
         self.edges.retain(|_, e| e.source != id && e.target != id);
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Viewport { pub pan_x: f64, pub pan_y: f64, pub zoom: f64 }
+pub struct Viewport {
+    pub pan_x: f64,
+    pub pan_y: f64,
+    pub zoom: f64,
+}
 impl Viewport {
     pub fn canvas_to_screen(self, x: f64, y: f64) -> (f64, f64) {
         (x * self.zoom + self.pan_x, y * self.zoom + self.pan_y)
     }
 
-    pub fn zoom_at_point(self, mx: f64, my: f64, delta: f64,
-                         min_zoom: f64, max_zoom: f64) -> Result<Self, Error> {
-        if !self.zoom.is_finite() || self.zoom <= 0.0 || !delta.is_finite() ||
-            !mx.is_finite() || !my.is_finite() || !min_zoom.is_finite() ||
-            !max_zoom.is_finite() || min_zoom <= 0.0 || min_zoom > max_zoom {
+    pub fn zoom_at_point(
+        self,
+        mx: f64,
+        my: f64,
+        delta: f64,
+        min_zoom: f64,
+        max_zoom: f64,
+    ) -> Result<Self, Error> {
+        if !self.zoom.is_finite()
+            || self.zoom <= 0.0
+            || !delta.is_finite()
+            || !mx.is_finite()
+            || !my.is_finite()
+            || !min_zoom.is_finite()
+            || !max_zoom.is_finite()
+            || min_zoom <= 0.0
+            || min_zoom > max_zoom
+        {
             return Err(Error::InvalidViewport);
         }
         let new_zoom = (self.zoom + delta).clamp(min_zoom, max_zoom);
         let gx = (mx - self.pan_x) / self.zoom;
         let gy = (my - self.pan_y) / self.zoom;
-        Ok(Self { zoom: new_zoom, pan_x: mx - gx * new_zoom, pan_y: my - gy * new_zoom })
+        Ok(Self {
+            zoom: new_zoom,
+            pan_x: mx - gx * new_zoom,
+            pan_y: my - gy * new_zoom,
+        })
     }
 }
