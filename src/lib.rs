@@ -59,6 +59,7 @@ pub enum NodeKind {
 #[serde(untagged)]
 pub enum Value {
     Text(String),
+    Integer(i64),
     Number(f64),
     Boolean(bool),
 }
