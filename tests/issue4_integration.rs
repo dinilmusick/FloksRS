@@ -13,6 +13,14 @@ fn typescript_camel_case_authoring_fixture_and_invalid_handles() {
     let fixture = r#"{"sessionId":"session-one","context":"application","nodes":[{"id":"page","kind":"page","name":"Page","props":{"title":"A","width":100,"visible":true},"slots":{},"states":{},"events":{}}],"bindings":[],"operations":[{"operationId":"execute","name":"Execute","inputFields":[{"name":"input","type":"string"}]}],"metadata":{"origin":"fixture"}}"#;
     let original: serde_json::Value = serde_json::from_str(fixture).unwrap();
     let decoded = import_authoring(fixture).unwrap();
+    let wrapped = floksrs::codec::export_authoring_document(&decoded).unwrap();
+    assert_eq!(
+        floksrs::codec::import_authoring_document(&wrapped).unwrap(),
+        decoded
+    );
+    assert!(floksrs::codec::import_authoring_document(
+        &wrapped.replace("\"schemaVersion\":1", "\"schemaVersion\":99")
+    ).is_err());
     assert_eq!(decoded.session_id, "session-one");
     assert_eq!(decoded.operations[0].input_fields[0].field_type, "string");
     let encoded: serde_json::Value =

@@ -84,8 +84,23 @@ pub fn validate_session(session: &AuthoringSession) -> Result<(), CodecError> {
             )));
         }
         required(&binding.property)?;
+        required(&binding.target.kind)?;
+        required(&binding.target.api_id)?;
+        required(&binding.target.field)?;
         if !bound.insert((&binding.component_id, &binding.property)) {
             return Err(invalid("duplicate property binding"));
+        }
+    }
+    let mut operation_ids = BTreeSet::new();
+    for operation in &session.operations {
+        required(&operation.operation_id)?;
+        required(&operation.name)?;
+        if !operation_ids.insert(operation.operation_id.as_str()) {
+            return Err(invalid("duplicate operation identifier"));
+        }
+        for field in operation.input_fields.iter().chain(&operation.output_fields) {
+            required(&field.name)?;
+            required(&field.field_type)?;
         }
     }
     Ok(())
@@ -100,6 +115,30 @@ pub fn import_authoring(source: &str) -> Result<AuthoringSession, CodecError> {
     let doc: AuthoringSession = serde_json::from_str(source).map_err(syntax)?;
     validate_session(&doc)?;
     Ok(doc)
+}
+
+/// Versioned storage envelope; flat export_authoring is the exact TypeScript wire shape.
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct AuthoringEnvelope {
+    schema_version: u32,
+    session: AuthoringSession,
+}
+pub fn export_authoring_document(session: &AuthoringSession) -> Result<String, CodecError> {
+    validate_session(session)?;
+    serde_json::to_string(&AuthoringEnvelope {
+        schema_version: SCHEMA_VERSION,
+        session: session.clone(),
+    })
+    .map_err(syntax)
+}
+pub fn import_authoring_document(source: &str) -> Result<AuthoringSession, CodecError> {
+    let document: AuthoringEnvelope = serde_json::from_str(source).map_err(syntax)?;
+    if document.schema_version != SCHEMA_VERSION {
+        return Err(CodecError::Schema("unsupported authoring schema version".into()));
+    }
+    validate_session(&document.session)?;
+    Ok(document.session)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
