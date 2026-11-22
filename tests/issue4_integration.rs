@@ -1,5 +1,6 @@
 use floksrs::codec::{
-    export_authoring, export_graph, export_registry, import_authoring, import_graph, import_registry,
+    export_authoring, export_graph, export_registry, import_authoring, import_graph,
+    import_registry,
 };
 use floksrs::controls::{Action, Kind, Registry, Widget};
 use floksrs::semantic_bridge::Bridge;
@@ -25,13 +26,17 @@ fn typescript_camel_case_authoring_fixture_and_invalid_handles() {
         component_id: "gone".into(),
         property: "value".into(),
         target: BindingTarget {
-            kind: "backend".into(), api_id: "api".into(),
-            field: "result".into(), field_type: None,
+            kind: "backend".into(),
+            api_id: "api".into(),
+            field: "result".into(),
+            field_type: None,
         },
     });
     assert!(export_authoring(&dangling).is_err());
     let mut nonfinite = AuthoringNode::new("num", NodeKind::Page, None);
-    nonfinite.props.insert("bad".into(), floksrs::Value::Number(f64::NAN));
+    nonfinite
+        .props
+        .insert("bad".into(), floksrs::Value::Number(f64::NAN));
     let mut session = floksrs::AuthoringSession::new("another", Context::Application);
     session.add_node(nonfinite).unwrap();
     assert!(export_authoring(&session).is_err());
@@ -46,10 +51,15 @@ fn graph_and_registry_snapshot_roundtrip_and_corruption_rejection() {
     second.inputs.push(Socket::new("in", Some("midi")));
     graph.add_node(first).unwrap();
     graph.add_node(second).unwrap();
-    graph.connect(floksrs::Edge {
-        id: "edge".into(), source: "first".into(), source_socket: "out".into(),
-        target: "second".into(), target_socket: "in".into(),
-    }).unwrap();
+    graph
+        .connect(floksrs::Edge {
+            id: "edge".into(),
+            source: "first".into(),
+            source_socket: "out".into(),
+            target: "second".into(),
+            target_socket: "in".into(),
+        })
+        .unwrap();
     let json = export_graph(&graph).unwrap();
     let restored = import_graph(&json).unwrap();
     assert_eq!(restored, graph);
@@ -57,12 +67,19 @@ fn graph_and_registry_snapshot_roundtrip_and_corruption_rejection() {
     let broken = json.replace("\"targetSocket\":\"in\"", "\"targetSocket\":\"gone\"");
     assert!(import_graph(&broken).is_err());
     let mut registry = Registry::default();
-    registry.insert(Widget::new("page", Kind::Label, None)).unwrap();
-    registry.insert(Widget::new("button", Kind::Button, Some("page".into()))).unwrap();
+    registry
+        .insert(Widget::new("page", Kind::Label, None))
+        .unwrap();
+    registry
+        .insert(Widget::new("button", Kind::Button, Some("page".into())))
+        .unwrap();
     registry.perform("button", Action::Activate).unwrap();
     let restored = import_registry(&export_registry(&registry).unwrap()).unwrap();
     assert_eq!(restored.snapshot().len(), 2);
-    assert_eq!(restored.get("button").unwrap().parent.as_deref(), Some("page"));
+    assert_eq!(
+        restored.get("button").unwrap().parent.as_deref(),
+        Some("page")
+    );
     assert!(restored.events.is_empty());
     assert!(import_registry(r#"{"schemaVersion":1,"widgets":[{"id":"x","parent":"missing","kind":"button","label":"","visible":true,"enabled":true,"readOnly":false,"text":"","checked":false,"open":false,"options":[],"selected":null,"metadata":{}}]}"#).is_err());
 }
@@ -70,19 +87,34 @@ fn graph_and_registry_snapshot_roundtrip_and_corruption_rejection() {
 #[test]
 fn frnl_semantic_bridge_propagates_state_and_disposes_resources() {
     let mut bridge = Bridge::new();
-    bridge.mount(Widget::new("page", Kind::Label, None)).unwrap();
-    bridge.mount(Widget::new("play", Kind::Button, Some("page".into()))).unwrap();
-    bridge.mount(Widget::new("name", Kind::TextField, Some("page".into()))).unwrap();
+    bridge
+        .mount(Widget::new("page", Kind::Label, None))
+        .unwrap();
+    bridge
+        .mount(Widget::new("play", Kind::Button, Some("page".into())))
+        .unwrap();
+    bridge
+        .mount(Widget::new("name", Kind::TextField, Some("page".into())))
+        .unwrap();
     bridge.dispatch("play", Action::Activate).unwrap();
-    bridge.dispatch("name", Action::Input("value".into())).unwrap();
+    bridge
+        .dispatch("name", Action::Input("value".into()))
+        .unwrap();
     assert_eq!(bridge.runtime.history().len(), 2);
     assert_eq!(bridge.runtime.entity("name").unwrap().state, "active");
-    assert_eq!(bridge.runtime.entity("name").unwrap().data.get("value"),
-        Some(&Data::Text("value".into())));
+    assert_eq!(
+        bridge.runtime.entity("name").unwrap().data.get("value"),
+        Some(&Data::Text("value".into()))
+    );
     bridge.suspend("name").unwrap();
-    assert!(bridge.dispatch("name", Action::Input("blocked".into())).is_err());
+    assert!(bridge
+        .dispatch("name", Action::Input("blocked".into()))
+        .is_err());
     bridge.resume("name").unwrap();
-    assert_eq!(bridge.runtime.entity("name").unwrap().lifecycle, LifecyclePhase::Active);
+    assert_eq!(
+        bridge.runtime.entity("name").unwrap().lifecycle,
+        LifecyclePhase::Active
+    );
     assert_eq!(bridge.dispose_subtree("page").unwrap(), 3);
     assert!(bridge.runtime.entity("play").is_err());
     assert!(bridge.dispatch("play", Action::Activate).is_err());
@@ -99,8 +131,18 @@ fn framebuffer_writes_actual_pixels_and_rejects_invalid_buffers() {
     controls.insert(button).unwrap();
     let mut pixels = vec![0; 50 * 20];
     let mut framebuffer = Framebuffer::new(50, 20, &mut pixels).unwrap();
-    framebuffer.draw(&controls, &Theme::default(),
-        &[Rect { x: 2, y: 2, width: 40, height: 15 }]).unwrap();
+    framebuffer
+        .draw(
+            &controls,
+            &Theme::default(),
+            &[Rect {
+                x: 2,
+                y: 2,
+                width: 40,
+                height: 15,
+            }],
+        )
+        .unwrap();
     assert_eq!(framebuffer.pixels()[0], 0x101010);
     assert_eq!(framebuffer.pixels()[2 * 50 + 2], 0x808080);
     assert_ne!(framebuffer.pixels()[5 * 50 + 5], 0x101010);
@@ -110,7 +152,9 @@ fn framebuffer_writes_actual_pixels_and_rejects_invalid_buffers() {
 #[cfg(feature = "host-io")]
 #[test]
 fn midi_port_and_osc_network_packets_have_real_payloads() {
-    use floksrs::host_io::{send_midi, send_osc, MidiPacket, MidiPort, OscArg, OscMessage, OscPort};
+    use floksrs::host_io::{
+        send_midi, send_osc, MidiPacket, MidiPort, OscArg, OscMessage, OscPort,
+    };
     struct Capture(Vec<u8>);
     impl MidiPort for Capture {
         type Error = ();
@@ -135,8 +179,12 @@ fn midi_port_and_osc_network_packets_have_real_payloads() {
     assert_eq!(&port.0, midi.as_bytes());
     let osc = OscMessage {
         address: "/synth/pitch".into(),
-        args: vec![OscArg::Int(60), OscArg::Float(0.5), OscArg::Bool(true),
-            OscArg::Text("play".into())],
+        args: vec![
+            OscArg::Int(60),
+            OscArg::Float(0.5),
+            OscArg::Bool(true),
+            OscArg::Text("play".into()),
+        ],
     };
     let encoded = osc.encode().unwrap();
     assert_eq!(OscMessage::decode(&encoded).unwrap(), osc);
@@ -144,6 +192,11 @@ fn midi_port_and_osc_network_packets_have_real_payloads() {
     let mut host = Capture(Vec::new());
     send_osc(&mut host, &osc).unwrap();
     assert_eq!(host.0, encoded);
-    assert!(OscMessage::decode(&encoded[..encoded.len()-1]).is_err());
-    assert!(OscMessage { address: "bad".into(), args: Vec::new() }.encode().is_err());
+    assert!(OscMessage::decode(&encoded[..encoded.len() - 1]).is_err());
+    assert!(OscMessage {
+        address: "bad".into(),
+        args: Vec::new()
+    }
+    .encode()
+    .is_err());
 }
