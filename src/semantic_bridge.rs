@@ -173,7 +173,7 @@ impl Bridge {
         for id in removed {
             ordered.push((self.runtime.path(&id)?.len(), id));
         }
-        ordered.sort_by(|a, b| b.0.cmp(&a.0));
+        ordered.sort_by_key(|a| core::cmp::Reverse(a.0));
         for (_, id) in &ordered {
             self.runtime
                 .transition_lifecycle(id, LifecyclePhase::Disposing)?;
