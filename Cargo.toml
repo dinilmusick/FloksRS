@@ -1,13 +1,20 @@
 [package]
 name = "floksrs"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
-description = "Portable native semantic UI, graph and musical editor library"
+description = "Portable Floks native semantics with JSON, FrnlRS, optional framebuffer and MIDI/OSC hosts"
 license = "MIT"
+
 [features]
 default = ["std"]
 std = ["frnlrs/std"]
+framebuffer = []
+host-io = []
+
 [dependencies]
 frnlrs = { git = "https://github.com/dinilmusick/FrnlRS", rev = "4325cf84fdad2a51ea41c10bf049342fee2a7327", default-features = false }
+serde = { version = "=1.0.228", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "=1.0.145", default-features = false, features = ["alloc"] }
+
 [lib]
 path = "src/lib.rs"

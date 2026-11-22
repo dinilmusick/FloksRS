@@ -11,6 +11,14 @@ use alloc::borrow::ToOwned;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
+
+pub mod codec;
+pub mod semantic_bridge;
+#[cfg(feature = "framebuffer")]
+pub mod framebuffer;
+#[cfg(feature = "host-io")]
+pub mod host_io;
 
 pub mod controls;
 pub mod graph_edit;
@@ -31,37 +39,77 @@ pub enum Error {
     PositionLocked(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Context {
     Service,
     GeneralComponent,
     Application,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum NodeKind {
     Page,
     Section,
     Component,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Value {
     Text(String),
     Number(f64),
     Boolean(bool),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
+pub struct AuthoringAssetRef {
+    pub package_id: String,
+    pub package_version: String,
+    pub export_path: String,
+    pub asset_id: String,
+    pub asset_version: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
+pub struct AuthoringOperationField {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub field_type: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
+pub struct AuthoringOperation {
+    pub operation_id: String,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub input_fields: Vec<AuthoringOperationField>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub output_fields: Vec<AuthoringOperationField>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
 pub struct AuthoringNode {
     pub id: String,
     pub kind: NodeKind,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub component_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub asset_ref: Option<AuthoringAssetRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_id: Option<String>,
+    #[serde(default)]
     pub props: BTreeMap<String, Value>,
+    #[serde(default)]
     pub slots: BTreeMap<String, Vec<String>>,
+    #[serde(default)]
     pub states: BTreeMap<String, BTreeMap<String, Value>>,
+    #[serde(default)]
     pub events: BTreeMap<String, String>,
 }
 
@@ -78,6 +126,7 @@ impl AuthoringNode {
             kind,
             name,
             component_id: None,
+            asset_ref: None,
             parent_id,
             props: BTreeMap::new(),
             slots: BTreeMap::new(),
@@ -87,28 +136,33 @@ impl AuthoringNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
 pub struct BindingTarget {
     pub kind: String,
     pub api_id: String,
     pub field: String,
+    #[serde(default, skip_serializing_if="Option::is_none")]
     pub field_type: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
 pub struct Binding {
     pub component_id: String,
     pub property: String,
     pub target: BindingTarget,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
 pub struct AuthoringSession {
     pub session_id: String,
     pub context: Context,
     pub nodes: Vec<AuthoringNode>,
     pub bindings: Vec<Binding>,
-    pub operations: Vec<String>,
+    #[serde(default)]
+    pub operations: Vec<AuthoringOperation>,
     pub metadata: BTreeMap<String, String>,
 }
 

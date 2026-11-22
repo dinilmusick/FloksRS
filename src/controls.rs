@@ -4,8 +4,10 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::vec::Vec;
 use frnlrs::{Control, Descriptor, Surface, SurfaceError, Value};
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="kebab-case")]
 pub enum Kind {
     Button,
     TextField,
@@ -18,7 +20,8 @@ pub enum Kind {
     Label,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
 pub struct Widget {
     pub id: String,
     pub parent: Option<String>,

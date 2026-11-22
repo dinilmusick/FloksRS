@@ -13,10 +13,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: thumbv7em-none-eabihf,wasm32-unknown-unknown
       - run: cargo fmt --all -- --check
       - run: cargo test --all-targets
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test --all-targets --no-default-features
       - run: cargo clippy --all-targets --no-default-features -- -D warnings
+      - run: cargo test --all-targets --features framebuffer,host-io
+      - run: cargo clippy --all-targets --features framebuffer,host-io -- -D warnings
+      - run: cargo build --lib --target thumbv7em-none-eabihf --no-default-features --features framebuffer,host-io
+      - run: cargo build --lib --target wasm32-unknown-unknown --no-default-features --features framebuffer,host-io
       - run: cargo fmt --manifest-path examples/external-consumer/Cargo.toml -- --check
       - run: cargo run --manifest-path examples/external-consumer/Cargo.toml
