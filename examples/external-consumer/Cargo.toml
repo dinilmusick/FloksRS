@@ -1,0 +1,9 @@
+[package]
+name = "floksrs-external-consumer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+floksrs = { path = "../.." }
+frnlrs = { git = "https://github.com/dinilmusick/FrnlRS", rev = "4325cf84fdad2a51ea41c10bf049342fee2a7327" }

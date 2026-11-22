@@ -3,7 +3,19 @@
 //! Authoring source: packages/canvas-ui/src/authoring/authoringOperations.ts.
 //! Graph source: packages/contracts/src/state-graph.ts.
 
-use std::collections::{BTreeMap, HashSet};
+#![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
+extern crate alloc;
+
+use alloc::borrow::ToOwned;
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::String;
+use alloc::vec::Vec;
+
+pub mod controls;
+pub mod graph_edit;
+pub mod music;
+pub mod theme;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
@@ -134,8 +146,8 @@ impl AuthoringSession {
 
     /// The upstream API includes the requested ID even if it is unknown.
     /// A visited set ensures that malformed cyclic graphs always terminate.
-    pub fn subtree_ids(&self, root: &str) -> HashSet<String> {
-        let mut ids = HashSet::from([root.to_owned()]);
+    pub fn subtree_ids(&self, root: &str) -> BTreeSet<String> {
+        let mut ids = BTreeSet::from([root.to_owned()]);
         loop {
             let mut changed = false;
             for node in &self.nodes {
@@ -158,7 +170,7 @@ impl AuthoringSession {
             .ok_or_else(|| Error::MissingNode(id.to_owned()))?
             .parent_id
             .as_deref();
-        let mut visited = HashSet::from([id.to_owned()]);
+        let mut visited = BTreeSet::from([id.to_owned()]);
         let mut depth = 0;
         while let Some(p) = parent {
             if !visited.insert(p.to_owned()) {

@@ -1,9 +1,13 @@
 [package]
 name = "floksrs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Native Rust authoring and editable graph contracts for Floks"
+description = "Portable native semantic UI, graph and musical editor library"
 license = "MIT"
-
+[features]
+default = ["std"]
+std = ["frnlrs/std"]
+[dependencies]
+frnlrs = { git = "https://github.com/dinilmusick/FrnlRS", rev = "4325cf84fdad2a51ea41c10bf049342fee2a7327", default-features = false }
 [lib]
 path = "src/lib.rs"
