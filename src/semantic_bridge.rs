@@ -1,5 +1,6 @@
 //! Floks control semantics composed with FrnlRS lifecycle, state and event runtime.
 //! Events originate in the host; the bridge never schedules or synthesizes input.
+use crate::controls::{Action, Error as UiError, Event, Kind, Registry, Widget};
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::format;
 use alloc::string::{String, ToString};
@@ -8,7 +9,6 @@ use frnlrs::semantic::{
     ComponentDefinition, Context, Data, DataKind, Error as FrnlError, EventDefinition,
     LifecyclePhase, Runtime, StateDefinition,
 };
-use crate::controls::{Action, Error as UiError, Event, Kind, Registry, Widget};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
@@ -16,8 +16,16 @@ pub enum Error {
     Runtime(FrnlError),
     NotActive(String),
 }
-impl From<UiError> for Error { fn from(e: UiError) -> Self { Self::Widget(e) } }
-impl From<FrnlError> for Error { fn from(e: FrnlError) -> Self { Self::Runtime(e) } }
+impl From<UiError> for Error {
+    fn from(e: UiError) -> Self {
+        Self::Widget(e)
+    }
+}
+impl From<FrnlError> for Error {
+    fn from(e: FrnlError) -> Self {
+        Self::Runtime(e)
+    }
+}
 
 /// A native host owns this bridge and calls dispatch only for observed user actions.
 pub struct Bridge {
@@ -25,10 +33,17 @@ pub struct Bridge {
     pub runtime: Runtime,
 }
 impl Default for Bridge {
-    fn default() -> Self { Self { controls: Registry::default(), runtime: Runtime::new() } }
+    fn default() -> Self {
+        Self {
+            controls: Registry::default(),
+            runtime: Runtime::new(),
+        }
+    }
 }
 impl Bridge {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn mount(&mut self, widget: Widget) -> Result<(), Error> {
         let mut staged = self.controls.clone();
@@ -45,38 +60,54 @@ impl Bridge {
             Kind::Label => Vec::new(),
         };
         for &(name, payload) in &specs {
-            events.insert(name.to_string(), EventDefinition {
-                function_id: format!("floks_{name}"),
-                payload,
-            });
+            events.insert(
+                name.to_string(),
+                EventDefinition {
+                    function_id: format!("floks_{name}"),
+                    payload,
+                },
+            );
         }
         let mut states = BTreeMap::new();
-        states.insert("idle".into(), StateDefinition {
-            events: events.clone(),
-            ..StateDefinition::default()
-        });
-        states.insert("active".into(), StateDefinition {
-            events,
-            ..StateDefinition::default()
-        });
+        states.insert(
+            "idle".into(),
+            StateDefinition {
+                events: events.clone(),
+                ..StateDefinition::default()
+            },
+        );
+        states.insert(
+            "active".into(),
+            StateDefinition {
+                events,
+                ..StateDefinition::default()
+            },
+        );
         self.runtime.register_definition(ComponentDefinition {
             name: definition_name.clone(),
             initial_state: "idle".into(),
             states,
             context: Context::default(),
         })?;
-        self.runtime.mount(&id, &definition_name, widget.parent.as_deref())?;
-        self.runtime.transition_lifecycle(&id, LifecyclePhase::Initializing)?;
-        self.runtime.transition_lifecycle(&id, LifecyclePhase::Mounted)?;
-        self.runtime.transition_lifecycle(&id, LifecyclePhase::Active)?;
+        self.runtime
+            .mount(&id, &definition_name, widget.parent.as_deref())?;
+        self.runtime
+            .transition_lifecycle(&id, LifecyclePhase::Initializing)?;
+        self.runtime
+            .transition_lifecycle(&id, LifecyclePhase::Mounted)?;
+        self.runtime
+            .transition_lifecycle(&id, LifecyclePhase::Active)?;
         for &(event, _) in &specs {
             let name = event.to_string();
-            self.runtime.register_handler(&id, &format!("floks_{event}"),
+            self.runtime.register_handler(
+                &id,
+                &format!("floks_{event}"),
                 move |payload, context| {
                     context.set_data("value", payload.clone());
                     context.set_state(if name == "hide" { "idle" } else { "active" });
                     Ok(payload.clone())
-                })?;
+                },
+            )?;
         }
         self.controls = staged;
         Ok(())
@@ -102,12 +133,15 @@ impl Bridge {
     }
 
     pub fn suspend(&mut self, id: &str) -> Result<(), Error> {
-        self.runtime.transition_lifecycle(id, LifecyclePhase::Suspended)?;
+        self.runtime
+            .transition_lifecycle(id, LifecyclePhase::Suspended)?;
         Ok(())
     }
     pub fn resume(&mut self, id: &str) -> Result<(), Error> {
-        self.runtime.transition_lifecycle(id, LifecyclePhase::Resuming)?;
-        self.runtime.transition_lifecycle(id, LifecyclePhase::Active)?;
+        self.runtime
+            .transition_lifecycle(id, LifecyclePhase::Resuming)?;
+        self.runtime
+            .transition_lifecycle(id, LifecyclePhase::Active)?;
         Ok(())
     }
     pub fn advance_to(&mut self, timestamp_ms: u64) -> Result<(), Error> {
@@ -125,8 +159,13 @@ impl Bridge {
             let mut current = Some(w.id.as_str());
             let mut visited = BTreeSet::new();
             while let Some(id) = current {
-                if !visited.insert(id) { break; }
-                if id == root { removed.push(w.id.clone()); break; }
+                if !visited.insert(id) {
+                    break;
+                }
+                if id == root {
+                    removed.push(w.id.clone());
+                    break;
+                }
                 current = self.controls.get(id).and_then(|n| n.parent.as_deref());
             }
         }
@@ -136,8 +175,10 @@ impl Bridge {
         }
         ordered.sort_by(|a, b| b.0.cmp(&a.0));
         for (_, id) in &ordered {
-            self.runtime.transition_lifecycle(id, LifecyclePhase::Disposing)?;
-            self.runtime.transition_lifecycle(id, LifecyclePhase::Disposed)?;
+            self.runtime
+                .transition_lifecycle(id, LifecyclePhase::Disposing)?;
+            self.runtime
+                .transition_lifecycle(id, LifecyclePhase::Disposed)?;
             self.runtime.unmount(id)?;
         }
         self.controls.remove_subtree(root)?;

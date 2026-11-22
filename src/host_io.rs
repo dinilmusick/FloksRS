@@ -21,30 +21,49 @@ pub struct MidiPacket {
 }
 impl MidiPacket {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() < 2 || bytes.len() > 3 { return Err(Error::InvalidMidiData); }
+        if bytes.len() < 2 || bytes.len() > 3 {
+            return Err(Error::InvalidMidiData);
+        }
         let status = bytes[0];
-        if !(0x80..=0xef).contains(&status) { return Err(Error::InvalidMidiStatus); }
-        let expected = if (status & 0xf0) == 0xc0 || (status & 0xf0) == 0xd0 { 2 } else { 3 };
+        if !(0x80..=0xef).contains(&status) {
+            return Err(Error::InvalidMidiStatus);
+        }
+        let expected = if (status & 0xf0) == 0xc0 || (status & 0xf0) == 0xd0 {
+            2
+        } else {
+            3
+        };
         if bytes.len() != expected || bytes[1..].iter().any(|v| *v > 127) {
             return Err(Error::InvalidMidiData);
         }
-        let mut array = [0u8;3];
+        let mut array = [0u8; 3];
         array[..expected].copy_from_slice(bytes);
-        Ok(Self { bytes: array, length: expected })
+        Ok(Self {
+            bytes: array,
+            length: expected,
+        })
     }
     pub fn note_on(channel: u8, pitch: u8, velocity: u8) -> Result<Self, Error> {
-        if channel > 15 { return Err(Error::InvalidChannel); }
+        if channel > 15 {
+            return Err(Error::InvalidChannel);
+        }
         Self::from_bytes(&[0x90 | channel, pitch, velocity])
     }
     pub fn note_off(channel: u8, pitch: u8, velocity: u8) -> Result<Self, Error> {
-        if channel > 15 { return Err(Error::InvalidChannel); }
+        if channel > 15 {
+            return Err(Error::InvalidChannel);
+        }
         Self::from_bytes(&[0x80 | channel, pitch, velocity])
     }
     pub fn control_change(channel: u8, control: u8, value: u8) -> Result<Self, Error> {
-        if channel > 15 { return Err(Error::InvalidChannel); }
+        if channel > 15 {
+            return Err(Error::InvalidChannel);
+        }
         Self::from_bytes(&[0xb0 | channel, control, value])
     }
-    pub fn as_bytes(&self) -> &[u8] { &self.bytes[..self.length] }
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.bytes[..self.length]
+    }
 }
 
 pub trait MidiPort {
@@ -69,18 +88,26 @@ pub struct OscMessage {
     pub args: Vec<OscArg>,
 }
 fn validate_address(value: &str) -> Result<(), Error> {
-    if !value.starts_with('/') || value.len() < 2 ||
-        value.bytes().any(|b| b == 0 || b.is_ascii_whitespace()) {
+    if !value.starts_with('/')
+        || value.len() < 2
+        || value.bytes().any(|b| b == 0 || b.is_ascii_whitespace())
+    {
         return Err(Error::InvalidOscAddress);
     }
     Ok(())
 }
 fn push_osc_string(bytes: &mut Vec<u8>, value: &str) -> Result<(), Error> {
-    if value.as_bytes().contains(&0) { return Err(Error::InvalidOscArgument); }
+    if value.as_bytes().contains(&0) {
+        return Err(Error::InvalidOscArgument);
+    }
     bytes.extend_from_slice(value.as_bytes());
     bytes.push(0);
-    while bytes.len() % 4 != 0 { bytes.push(0); }
-    if bytes.len() > 65536 { return Err(Error::Oversized); }
+    while bytes.len() % 4 != 0 {
+        bytes.push(0);
+    }
+    if bytes.len() > 65536 {
+        return Err(Error::Oversized);
+    }
     Ok(())
 }
 impl OscMessage {
@@ -108,18 +135,26 @@ impl OscMessage {
                 OscArg::Text(text) => push_osc_string(&mut bytes, text)?,
                 OscArg::Bool(_) => {}
             }
-            if bytes.len() > 65536 { return Err(Error::Oversized); }
+            if bytes.len() > 65536 {
+                return Err(Error::Oversized);
+            }
         }
         Ok(bytes)
     }
     pub fn decode(packet: &[u8]) -> Result<Self, Error> {
-        if packet.len() > 65536 { return Err(Error::Oversized); }
-        if packet.len() % 4 != 0 { return Err(Error::Truncated); }
+        if packet.len() > 65536 {
+            return Err(Error::Oversized);
+        }
+        if packet.len() % 4 != 0 {
+            return Err(Error::Truncated);
+        }
         let mut at = 0;
         let address = read_string(packet, &mut at)?;
         validate_address(&address)?;
         let tags = read_string(packet, &mut at)?;
-        if !tags.starts_with(',') { return Err(Error::InvalidOscArgument); }
+        if !tags.starts_with(',') {
+            return Err(Error::InvalidOscArgument);
+        }
         let mut args = Vec::new();
         for tag in tags.chars().skip(1) {
             match tag {
@@ -131,7 +166,9 @@ impl OscMessage {
                         args.push(OscArg::Int(word as i32));
                     } else {
                         let value = f32::from_bits(word);
-                        if !value.is_finite() { return Err(Error::InvalidOscArgument); }
+                        if !value.is_finite() {
+                            return Err(Error::InvalidOscArgument);
+                        }
                         args.push(OscArg::Float(value));
                     }
                     at = end;
@@ -142,19 +179,26 @@ impl OscMessage {
                 _ => return Err(Error::InvalidOscArgument),
             }
         }
-        if at != packet.len() { return Err(Error::InvalidOscArgument); }
+        if at != packet.len() {
+            return Err(Error::InvalidOscArgument);
+        }
         Ok(Self { address, args })
     }
 }
 fn read_string(packet: &[u8], cursor: &mut usize) -> Result<String, Error> {
     let start = *cursor;
     let remainder = packet.get(start..).ok_or(Error::Truncated)?;
-    let stop = remainder.iter().position(|byte| *byte == 0).ok_or(Error::Truncated)?;
+    let stop = remainder
+        .iter()
+        .position(|byte| *byte == 0)
+        .ok_or(Error::Truncated)?;
     let text = core::str::from_utf8(&remainder[..stop]).map_err(|_| Error::InvalidOscArgument)?;
     let end = start.checked_add(stop + 1).ok_or(Error::Truncated)?;
     let aligned = end.checked_add(3).ok_or(Error::Truncated)? & !3;
     let pad = packet.get(end..aligned).ok_or(Error::Truncated)?;
-    if pad.iter().any(|byte| *byte != 0) { return Err(Error::InvalidOscArgument); }
+    if pad.iter().any(|byte| *byte != 0) {
+        return Err(Error::InvalidOscArgument);
+    }
     *cursor = aligned;
     Ok(text.to_string())
 }

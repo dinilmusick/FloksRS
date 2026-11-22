@@ -14,11 +14,11 @@ use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
 
 pub mod codec;
-pub mod semantic_bridge;
 #[cfg(feature = "framebuffer")]
 pub mod framebuffer;
 #[cfg(feature = "host-io")]
 pub mod host_io;
+pub mod semantic_bridge;
 
 pub mod controls;
 pub mod graph_edit;
@@ -64,7 +64,7 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoringAssetRef {
     pub package_id: String,
     pub package_version: String,
@@ -73,14 +73,14 @@ pub struct AuthoringAssetRef {
     pub asset_version: String,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoringOperationField {
     pub name: String,
     #[serde(rename = "type")]
     pub field_type: String,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoringOperation {
     pub operation_id: String,
     pub name: String,
@@ -92,7 +92,7 @@ pub struct AuthoringOperation {
     pub output_fields: Vec<AuthoringOperationField>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoringNode {
     pub id: String,
     pub kind: NodeKind,
@@ -137,17 +137,17 @@ impl AuthoringNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BindingTarget {
     pub kind: String,
     pub api_id: String,
     pub field: String,
-    #[serde(default, skip_serializing_if="Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub field_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Binding {
     pub component_id: String,
     pub property: String,
@@ -155,7 +155,7 @@ pub struct Binding {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all="camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoringSession {
     pub session_id: String,
     pub context: Context,
