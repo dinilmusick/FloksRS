@@ -102,7 +102,7 @@ fn push_osc_string(bytes: &mut Vec<u8>, value: &str) -> Result<(), Error> {
     }
     bytes.extend_from_slice(value.as_bytes());
     bytes.push(0);
-    while bytes.len() % 4 != 0 {
+    while !bytes.len().is_multiple_of(4) {
         bytes.push(0);
     }
     if bytes.len() > 65536 {
@@ -145,7 +145,7 @@ impl OscMessage {
         if packet.len() > 65536 {
             return Err(Error::Oversized);
         }
-        if packet.len() % 4 != 0 {
+        if !packet.len().is_multiple_of(4) {
             return Err(Error::Truncated);
         }
         let mut at = 0;
