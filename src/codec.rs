@@ -146,11 +146,36 @@ struct WireEdge {
     target_socket: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 struct GraphEnvelope {
     schema_version: u32,
     nodes: Vec<WireNode>,
     edges: Vec<WireEdge>,
+}
+
+/// Lossless versioned graph envelope retaining canonical Floks labels, node data,
+/// presentation extras and viewport fields while the native core projects semantics.
+#[derive(Clone, Debug, PartialEq)]
+pub struct GraphDocument {
+    raw: serde_json::Value,
+}
+impl GraphDocument {
+    pub fn from_json(source: &str) -> Result<Self, CodecError> {
+        import_graph(source)?;
+        let raw = serde_json::from_str(source).map_err(syntax)?;
+        Ok(Self { raw })
+    }
+    pub fn to_json(&self) -> Result<String, CodecError> {
+        let output = serde_json::to_string(&self.raw).map_err(syntax)?;
+        import_graph(&output)?;
+        Ok(output)
+    }
+    pub fn to_native(&self) -> Result<Graph, CodecError> {
+        import_graph(&self.to_json()?)
+    }
+    pub fn from_native(graph: &Graph) -> Result<Self, CodecError> {
+        Self::from_json(&export_graph(graph)?)
+    }
 }
 
 fn socket_to_wire(s: &Socket, direction: &str) -> WireSocket {
@@ -214,7 +239,7 @@ pub fn import_graph(source: &str) -> Result<Graph, CodecError> {
             "unsupported graph schema version".into(),
         ));
     }
-    let mut graph = Graph::default();
+    let mut editor = crate::graph_edit::Editor::default();
     for n in wire.nodes {
         required(&n.id)?;
         required(&n.node_type)?;
@@ -244,14 +269,14 @@ pub fn import_graph(source: &str) -> Result<Graph, CodecError> {
                 data_type: s.data_type,
             });
         }
-        graph
+        editor
             .add_node(node)
             .map_err(|e| invalid(format!("{e:?}")))?;
     }
     for e in wire.edges {
         required(&e.id)?;
-        graph
-            .connect(Edge {
+        editor
+            .connect_acyclic(Edge {
                 id: e.id,
                 source: e.source,
                 source_socket: e.source_socket,
@@ -260,7 +285,7 @@ pub fn import_graph(source: &str) -> Result<Graph, CodecError> {
             })
             .map_err(|e| invalid(format!("{e:?}")))?;
     }
-    Ok(graph)
+    Ok(editor.graph)
 }
 
 #[derive(Serialize, Deserialize)]

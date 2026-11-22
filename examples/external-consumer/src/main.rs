@@ -1,9 +1,9 @@
 use floksrs::controls::{Action, Kind, Registry, Widget};
 use floksrs::framebuffer::Framebuffer;
 use floksrs::host_io::{send_midi, send_osc, MidiPacket, MidiPort, OscArg, OscMessage, OscPort};
+use floksrs::music::{Geometry, Note, PianoRoll};
 use floksrs::semantic_bridge::Bridge;
 use floksrs::theme::{NativeRenderer, Rect, Theme};
-use floksrs::music::{Geometry, Note, PianoRoll};
 use frnlrs::{Control, Surface, SurfaceError, Value};
 use std::cell::Cell;
 use std::rc::Rc;
@@ -66,7 +66,9 @@ fn main() {
     assert_eq!(geometry.xy_to_pitch_tick(x, y).unwrap(), (60, 0));
     // Independent host delivery: real FrnlRS lifecycle/state and event history.
     let mut bridge = Bridge::new();
-    bridge.mount(Widget::new("native-action", Kind::Button, None)).unwrap();
+    bridge
+        .mount(Widget::new("native-action", Kind::Button, None))
+        .unwrap();
     bridge.dispatch("native-action", Action::Activate).unwrap();
     assert_eq!(bridge.runtime.history().len(), 1);
     assert_eq!(bridge.dispose_subtree("native-action").unwrap(), 1);
@@ -74,11 +76,18 @@ fn main() {
     // Real RGB framebuffer mutation, not a fake presentation acknowledgement.
     let mut framebuffer_pixels = vec![0u32; 64 * 20];
     let mut framebuffer = Framebuffer::new(64, 20, &mut framebuffer_pixels).unwrap();
-    framebuffer.draw(
-        &registry,
-        &Theme::default(),
-        &[Rect { x: 0, y: 0, width: 64, height: 20 }],
-    ).unwrap();
+    framebuffer
+        .draw(
+            &registry,
+            &Theme::default(),
+            &[Rect {
+                x: 0,
+                y: 0,
+                width: 64,
+                height: 20,
+            }],
+        )
+        .unwrap();
     assert_ne!(framebuffer.pixels()[0], 0);
 
     // Actual host-provided MIDI/OSC byte delivery and OSC decoding.

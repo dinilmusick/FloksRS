@@ -120,6 +120,20 @@ fn frnl_semantic_bridge_propagates_state_and_disposes_resources() {
     assert!(bridge.dispatch("play", Action::Activate).is_err());
 }
 
+
+#[test]
+fn canonical_graph_document_preserves_extra_metadata_and_rejects_cycles() {
+    use floksrs::codec::GraphDocument;
+    let fixture = r#"{"schemaVersion":1,"nodes":[{"id":"n","type":"controller","label":"My Controller","position":{"x":4.0,"y":7.0},"data":{"value":88},"inputs":[],"outputs":[]}],"edges":[],"viewport":{"zoom":1.25}}"#;
+    let document = GraphDocument::from_json(fixture).unwrap();
+    let restored: serde_json::Value = serde_json::from_str(&document.to_json().unwrap()).unwrap();
+    let original: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    assert_eq!(restored, original);
+    assert_eq!(document.to_native().unwrap().nodes.len(), 1);
+    let cycle = r#"{"schemaVersion":1,"nodes":[{"id":"n","type":"loop","position":{"x":0,"y":0},"inputs":[{"id":"in","type":"input"}],"outputs":[{"id":"out","type":"output"}]}],"edges":[{"id":"self","source":"n","sourceSocket":"out","target":"n","targetSocket":"in"}]}"#;
+    assert!(GraphDocument::from_json(cycle).is_err());
+}
+
 #[cfg(feature = "framebuffer")]
 #[test]
 fn framebuffer_writes_actual_pixels_and_rejects_invalid_buffers() {
