@@ -120,7 +120,6 @@ fn frnl_semantic_bridge_propagates_state_and_disposes_resources() {
     assert!(bridge.dispatch("play", Action::Activate).is_err());
 }
 
-
 #[test]
 fn canonical_graph_document_preserves_extra_metadata_and_rejects_cycles() {
     use floksrs::codec::GraphDocument;
