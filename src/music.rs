@@ -181,7 +181,7 @@ impl Geometry {
         {
             return Err(Error::TimeRange);
         }
-        Ok((127 - yp.floor() as u8, xt.floor() as u64))
+        Ok((127 - yp as u8, xt as u64))
     }
 
     pub fn zoom_about_x(self, anchor_x: f64, factor: f64) -> Result<Self, Error> {
