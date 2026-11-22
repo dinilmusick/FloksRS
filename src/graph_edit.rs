@@ -1,9 +1,9 @@
 //! Reversible graph edits, safe socket connections and selection.
+use crate::{Edge, Error as GraphError, Graph, GraphNode, Viewport};
 use alloc::borrow::ToOwned;
 use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
-use crate::{Edge, Error as GraphError, Graph, GraphNode, Viewport};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -150,7 +150,10 @@ impl Editor {
         }
         let mut next = self.graph.clone();
         for id in &self.selected {
-            let node = next.nodes.get(id).ok_or_else(|| GraphError::MissingNode(id.clone()))?;
+            let node = next
+                .nodes
+                .get(id)
+                .ok_or_else(|| GraphError::MissingNode(id.clone()))?;
             let (x, y) = (node.x + dx, node.y + dy);
             next.move_node(id, x, y)?;
         }

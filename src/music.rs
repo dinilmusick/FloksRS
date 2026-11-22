@@ -41,7 +41,9 @@ impl Note {
         if self.duration_ticks == 0 {
             return Err(Error::Duration);
         }
-        self.start_tick.checked_add(self.duration_ticks).ok_or(Error::Overflow)?;
+        self.start_tick
+            .checked_add(self.duration_ticks)
+            .ok_or(Error::Overflow)?;
         Ok(())
     }
 
@@ -77,11 +79,17 @@ impl PianoRoll {
     }
 
     pub fn remove(&mut self, id: &str) -> Result<Note, Error> {
-        self.notes.remove(id).ok_or_else(|| Error::Missing(id.to_owned()))
+        self.notes
+            .remove(id)
+            .ok_or_else(|| Error::Missing(id.to_owned()))
     }
 
     pub fn move_note(&mut self, id: &str, pitch: u8, tick: u64) -> Result<(), Error> {
-        let mut note = self.notes.get(id).cloned().ok_or_else(|| Error::Missing(id.to_owned()))?;
+        let mut note = self
+            .notes
+            .get(id)
+            .cloned()
+            .ok_or_else(|| Error::Missing(id.to_owned()))?;
         note.pitch = pitch;
         note.start_tick = tick;
         note.validate()?;
@@ -90,7 +98,11 @@ impl PianoRoll {
     }
 
     pub fn resize_note(&mut self, id: &str, ticks: u64) -> Result<(), Error> {
-        let mut note = self.notes.get(id).cloned().ok_or_else(|| Error::Missing(id.to_owned()))?;
+        let mut note = self
+            .notes
+            .get(id)
+            .cloned()
+            .ok_or_else(|| Error::Missing(id.to_owned()))?;
         note.duration_ticks = ticks;
         note.validate()?;
         self.notes.insert(id.to_owned(), note);
@@ -223,7 +235,9 @@ impl Timeline {
     }
 
     pub fn remove(&mut self, id: &str) -> Result<Section, Error> {
-        self.sections.remove(id).ok_or_else(|| Error::Missing(id.to_owned()))
+        self.sections
+            .remove(id)
+            .ok_or_else(|| Error::Missing(id.to_owned()))
     }
 
     pub fn sections_at(&self, tick: u64) -> Vec<&Section> {

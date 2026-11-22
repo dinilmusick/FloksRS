@@ -128,7 +128,10 @@ impl Registry {
             if p == id || !visited.insert(p) {
                 return Err(Error::Cycle);
             }
-            let ancestor = self.widgets.get(p).ok_or_else(|| Error::Missing(p.to_owned()))?;
+            let ancestor = self
+                .widgets
+                .get(p)
+                .ok_or_else(|| Error::Missing(p.to_owned()))?;
             cursor = ancestor.parent.as_deref();
         }
         if let Some(widget) = self.widgets.get_mut(id) {
@@ -155,7 +158,8 @@ impl Registry {
             }
         }
         self.widgets.retain(|key, _| !removed.contains(key));
-        self.events.retain(|event| !removed.contains(&event.widget_id));
+        self.events
+            .retain(|event| !removed.contains(&event.widget_id));
         Ok(removed.len())
     }
 
@@ -166,7 +170,10 @@ impl Registry {
             if !visited.insert(key) {
                 return Err(Error::Cycle);
             }
-            let widget = self.widgets.get(key).ok_or_else(|| Error::Missing(key.to_owned()))?;
+            let widget = self
+                .widgets
+                .get(key)
+                .ok_or_else(|| Error::Missing(key.to_owned()))?;
             if !widget.visible || !widget.enabled {
                 return Ok(false);
             }
@@ -180,7 +187,10 @@ impl Registry {
         if !self.available(id)? {
             return Err(Error::Unavailable(id.to_owned()));
         }
-        let widget = self.widgets.get_mut(id).ok_or_else(|| Error::Missing(id.to_owned()))?;
+        let widget = self
+            .widgets
+            .get_mut(id)
+            .ok_or_else(|| Error::Missing(id.to_owned()))?;
         if widget.read_only && !matches!(action, Action::Activate) {
             return Err(Error::ReadOnly(id.to_owned()));
         }
@@ -213,7 +223,10 @@ impl Registry {
         id: &str,
         handler: impl FnMut(Control, &Value) -> Result<(), SurfaceError> + 'static,
     ) -> Result<(), SurfaceError> {
-        let widget = self.widgets.get(id).ok_or_else(|| SurfaceError::Unknown(id.to_owned()))?;
+        let widget = self
+            .widgets
+            .get(id)
+            .ok_or_else(|| SurfaceError::Unknown(id.to_owned()))?;
         let controls = match widget.kind {
             Kind::Button | Kind::Tile | Kind::Dialog => alloc::vec![Control::Click],
             Kind::TextField => alloc::vec![Control::Input],
