@@ -98,7 +98,11 @@ pub fn validate_session(session: &AuthoringSession) -> Result<(), CodecError> {
         if !operation_ids.insert(operation.operation_id.as_str()) {
             return Err(invalid("duplicate operation identifier"));
         }
-        for field in operation.input_fields.iter().chain(&operation.output_fields) {
+        for field in operation
+            .input_fields
+            .iter()
+            .chain(&operation.output_fields)
+        {
             required(&field.name)?;
             required(&field.field_type)?;
         }
@@ -135,7 +139,9 @@ pub fn export_authoring_document(session: &AuthoringSession) -> Result<String, C
 pub fn import_authoring_document(source: &str) -> Result<AuthoringSession, CodecError> {
     let document: AuthoringEnvelope = serde_json::from_str(source).map_err(syntax)?;
     if document.schema_version != SCHEMA_VERSION {
-        return Err(CodecError::Schema("unsupported authoring schema version".into()));
+        return Err(CodecError::Schema(
+            "unsupported authoring schema version".into(),
+        ));
     }
     validate_session(&document.session)?;
     Ok(document.session)

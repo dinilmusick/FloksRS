@@ -20,7 +20,8 @@ fn typescript_camel_case_authoring_fixture_and_invalid_handles() {
     );
     assert!(floksrs::codec::import_authoring_document(
         &wrapped.replace("\"schemaVersion\":1", "\"schemaVersion\":99")
-    ).is_err());
+    )
+    .is_err());
     assert_eq!(decoded.session_id, "session-one");
     assert_eq!(decoded.operations[0].input_fields[0].field_type, "string");
     let encoded: serde_json::Value =
