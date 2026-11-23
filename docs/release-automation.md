@@ -1,25 +1,28 @@
-# floksrs registry publishing
+# FloksRS — verifiable crates.io release operations
 
-The checked-in Git revisions preserve the existing development/test
-dependency pins. Corresponding `version` constraints now allow Cargo
-to produce a crates.io-compatible manifest; they do **not** imply those
-dependency versions have been published.
+The single workflow `.github/workflows/release-rust.yml` has four jobs.
+Every pull request and push to main runs portable Cargo tests.
+Cargo registry dry-run/package validation is gated by `CRATES_IO_DEPENDENCIES_READY=true` until all required upstream crates are published. Cargo tests always run.
 
-**Upstream order:** publish initial crates for KrnlRS, KloksRS and
-FrnlRS (and FloksRS before SkipoRS). Their exact registry package
-versions must exist and have independent consumer tests.
+## Initial publication (one time per new crate name)
 
-Set GitHub repository variable `CRATES_IO_DEPENDENCIES_READY=true`
-only after that is verified; otherwise every release job is intentionally
-skipped. On each push to main after enabling it, cargo tests and
-`cargo publish --dry-run` must pass before release-plz can prepare
-a version PR. Merging a release PR publishes to crates.io only after
-initial manual bootstrap and crates.io Trusted Publisher registration.
+1. Verify the crate name is owned or available on crates.io; verify the committed Cargo version and dependencies. crates.io does not accept OIDC Trusted Publishing for a crate's first version.
+2. Create the GitHub environment `crates-bootstrap`, restricted to the main branch and preferably requiring maintainer approval. Add a **scoped, short-lived crates.io token with publish-new permission** as environment secret `CRATES_IO_BOOTSTRAP_TOKEN`. Never copy it to a local shell, application env, source, logs or task ledger.
+3. Independently verify the required upstream crates exist on crates.io at the manifest versions, then set the repository variable `CRATES_IO_DEPENDENCIES_READY=true`.
+4. Set repository variable `CRATES_IO_BOOTSTRAP_READY=true`. From GitHub Actions dispatch `Rust crates.io release` **on main** with input `bootstrap=true`. This uses release-plz under the GitHub runner, with the scoped token, and must pass validation. Check crates.io and the GitHub release/tag separately.
+5. Remove and revoke the bootstrap token and set `CRATES_IO_BOOTSTRAP_READY=false` after verifying first publication.
 
-For new crate names, the first publish cannot use OIDC: store a scoped
-bootstrap token only in GitHub Actions secrets, trigger first publish
-in GitHub Actions, register the `release-rust.yml` workflow and
-`crates-io` environment with crates.io, then set
-`CRATES_IO_TRUSTED_PUBLISHING_READY=true`. No local token is needed.
-For fully automated release-PR merge with validation, a GitHub App
-token and mandatory CI checks are still required.
+## Routine tokenless publication
+
+1. In crates.io package Settings > Trusted Publishing, register owner `dinilmusick`, repo `FloksRS`, workflow `release-rust.yml`, GitHub environment `crates-io`. This must be done by a package owner.
+2. Configure GitHub environment `crates-io` restricted to main. Only after confirming the exact publisher registration and published initial crate set repository variable `CRATES_IO_TRUSTED_PUBLISHING_READY=true`.
+3. On subsequent verified merges to `main`, release-plz `release` uses GitHub OIDC to publish any bumped, unpublished version. The job has `id-token: write`; it deliberately does not read a long-lived registry token.
+4. A release PR uses a short-lived **GitHub App installation token** so that its own GitHub PR checks actually run. Install a least-privilege GitHub App with Contents and Pull requests write access in this repository; set `RELEASE_PLZ_APP_ID` as a GitHub variable, `RELEASE_PLZ_APP_PRIVATE_KEY` as a GitHub secret, and `RELEASE_PLZ_APP_READY=true` only once configured. The release PR is not automatically merged; enforce required checks, then merge via your approved policy. Do not bypass protections.
+
+The old approach using the built-in `GITHUB_TOKEN` to create release PRs is intentionally avoided: such PRs do not launch required CI, and repositories may explicitly deny PR creation from GitHub Actions. No automatic release is claimed until the registry, environment, App and clean external consumer tests confirm it. Use Conventional Commits (`fix:`, `feat:`, `feat!:`) for semantic version changes.
+
+## Release order and acceptance
+
+First publish GutRS, KrnlRS, KloksRS, FrnlRS, then FloksRS, then SkipoRS. For each dependent crate, verify real registry packages at the exact Cargo manifest versions. A Git revision paired with `version` in development is not evidence that the version is published.
+
+**Do not claim a release complete** from a green GitHub Action alone. Verify the new version on crates.io, Cargo installation from a clean external project with no git override, and source/tag identity. Keep the GitHub repository and crates.io permissions least-privilege.
